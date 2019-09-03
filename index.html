@@ -117,7 +117,7 @@
             border-width: 25px 10px;
             border-bottom-color: burlywood;
             top: -48px;
-            left: 0;
+            left: -3px;/* 对齐指针 */
             right: 0;
             margin: 0 auto;
             width: 0;
@@ -132,7 +132,7 @@
             border-width: 25px 10px;
             border-bottom-color: grey;
             top: -48px;
-            left: 0;
+            left: -3px;
             right: 0;
             margin: 0 auto;
             width: 0;
@@ -140,7 +140,15 @@
             color: white;
         }
         
-        
+        .biaodan {
+            position: relative;
+            top: 0;
+            left: 0;
+            width: 350px;
+            height: 350px;
+            margin: auto auto;
+            margin-top: 50px;
+        }
     </style>
 	
 </head>
@@ -150,16 +158,18 @@
     
     <div id="app">
         <h1 v-cloak style="text-align:center;margin-bottom: 20px;">{{title}}</h1>
+        <br/>
+        <h1 v-cloak style="text-align:center;margin-bottom: 20px;">{{resultOpt}}</h1>
         <div class="zhuanpan_wrap" v-cloak>
             <!-- 这个div要转的，但是下面的按钮不需要转，所以不把按钮放在这里面 -->
             
             <div class="zhuanpan" :style="zhuanpanStyle()">
-                <ul class="bg" v-for="(item, index) in target" :key="'bg-' + index">
-                    <li :style="getBgStyle(index)"></li>
+                <ul class="bg">
+                    <li :style="getBgStyle(index)" v-for="(item, index) in target" :key="'bg-' + index"></li>
                     
                 </ul>
-                <ul class="gift" v-for="(item, index) in target" :key="'gift-' + index">
-                    <li :style="getGiftStyle(index)"><span>{{item}}</span></li>
+                <ul class="gift">
+                    <li :style="getGiftStyle(index)" v-for="(item, index) in target" :key="'gift-' + index"><span>{{item}}</span></li>
                 </ul>
             </div>
             
@@ -167,34 +177,58 @@
             <div class="btn" @click="zhuan" @mousedown="enterClick()" @mouseup="leaveClick()" @touchstart="enterClick()" @touchend="leaveClick()" :class="clickStyle()"></div>
         </div>
         <br/>
-        输入标题:
-        <input type="text" v-model="title">
-        <br/><br/>
-        请输入选项（一行一个或逗号空格隔开选项）：
-        <br/>
-        <textarea id="" cols="30" rows="10" v-model="options"></textarea>
-        <br/>
-        <button style="width: 50px" @click="done">确定</button>
-        <button style="width: 50px" @click="reset">重置</button>
+        <div class="biaodan">
+            输入标题:
+            <input type="text" v-model="title">
+            <br/><br/>
+            请输入选项（一行一个或逗号空格隔开选项）：
+            <br/>
+            <textarea id="" cols="30" rows="10" v-model="options"></textarea>
+            <br/>
+            <button style="width: 100px;height: 50px;" @click="done">确定</button>
+            <button style="width: 100px;height: 50px;" @click="reset">重置</button>
+        </div>
+        
     </div>
     
     
 </body>
 <script src="https://cdn.bootcss.com/vue/2.6.10/vue.min.js"></script>
 <script type="text/javascript">
-function randomNum(minNum,maxNum){ 
-    switch(arguments.length){ 
-        case 1: 
-            return parseInt(Math.random()*minNum+1,10); 
-        break; 
-        case 2: 
-            return parseInt(Math.random()*(maxNum-minNum+1)+minNum,10); 
-        break; 
-            default: 
-                return 0; 
+    let timmer = "";
+    function randomNum(minNum,maxNum){ 
+        switch(arguments.length){ 
+            case 1: 
+                return parseInt(Math.random()*minNum+1,10); 
             break; 
+            case 2: 
+                return parseInt(Math.random()*(maxNum-minNum+1)+minNum,10); 
+            break; 
+                default: 
+                    return 0; 
+                break; 
+        } 
     } 
-} 
+    function shiftArr(arr) {
+        // 将数组第一个成员移动到最后一个
+        let newArr = arr;
+        let firstMember = arr.shift();
+        arr.push(firstMember);
+        return newArr;
+    }
+    function getResult(angle,num) {
+        // 用于得到最终结果
+        // num:片数
+        
+        let j = 360 / num;
+        let y = Math.abs(angle) % 360;
+        let index = Math.floor((y - j/2) / j) + 1;
+        if (index == num) {
+            index = 0;
+        }
+        return index;
+    }
+
     let vm = new Vue({
         el: "#app",
         data () {
@@ -203,7 +237,9 @@ function randomNum(minNum,maxNum){
                 isClick: false,
                 angle: 0,
                 options: "",
-                title: ""
+                title: "",
+                angles: [],
+                resultOpt: "",
             }
         },
         methods: {
@@ -225,8 +261,21 @@ function randomNum(minNum,maxNum){
             zhuan() {
                 // this.angle = this.angle + randomNum(360,720);
                 // this.$refs.zhuanpanDOM.style = 'transform: rotate(' + this.angle + 'deg);transition: 2s cubic-bezier(0,0,0.3,1);';
+
+                // 数组：将arr第一个成员放到最后一个
+                // 1：360/片数 = 基数
+                // 2：abs(旋转角度)%360 = 余数
+                // 3：floor((余数-基数/2)/基数) + 1 = 数组成员序号
+                this.resultOpt = ""
+                this.angle = this.angle - randomNum(720,1080);
+                clearTimeout(timmer);
+                timmer = setTimeout(() => {
+                    this.resultOpt = this.angles[getResult(this.angle,this.target.length)];
+                    console.log(this.resultOpt);
+                }, 2000);
                 
-                this.angle = this.angle + randomNum(720,1080);
+                
+
             },
             enterClick() {
                 this.isClick = true;
@@ -253,8 +302,11 @@ function randomNum(minNum,maxNum){
                         arr = this.options.split(" ");
                     }
                 }
-                
                 arr = arr.concat(arr);
+                this.angles = shiftArr(arr);
+                
+                
+
                 this.target = arr;
                 
             },
