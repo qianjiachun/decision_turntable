@@ -149,7 +149,10 @@
             width: 350px;
             height: 350px;
             margin: auto auto;
-            margin-top: 50px;
+            margin-top: 80px;
+        }
+        input,textarea {
+            border: 1px solid grey;
         }
     </style>
 	
@@ -181,11 +184,15 @@
         <br/>
         <div class="biaodan">
             输入标题:
-            <input type="text" v-model="title">
-            <br/><br/>
-            请输入选项（一行一个或逗号空格隔开选项）：
+            <input type="text" v-model="title" style="margin-left: 5px;">
             <br/>
-            <textarea id="" cols="30" rows="10" v-model="options"></textarea>
+            选项离散倍数：
+            <input type="number" v-model="mul" style="width: 50px;text-align: center">
+            <br/><br/>
+            请输入选项（一行一个或逗号/空格隔开选项）：
+            
+            <br/>
+            <textarea placeholder="你可以这么填写：&#10;她喜欢我&#10;她不喜欢我&#10;&#10;也可以加上概率：&#10;她爱我(0.2) 她不爱我(0.8)&#10;&#10;概率可以只写一项，其他的自动计算平均值&#10;火锅 黄焖鸡(0.6) 牛肉面&#10;&#10;修改设置前请点重置按钮或者刷新页面" cols="40" rows="13" v-model="options"></textarea>
             <br/>
             <button style="width: 100px;height: 50px;" @click="done">确定</button>
             <button style="width: 100px;height: 50px;" @click="reset">重置</button>
@@ -195,27 +202,57 @@
     
     
 </body>
+<script src="js/floatCalc.js"></script>
+<script src="js/randomNum.js"></script>
 <script src="https://cdn.bootcss.com/vue/2.6.10/vue.min.js"></script>
 <script type="text/javascript">
     let timmer = "";
-    function randomNum(minNum,maxNum){ 
-        switch(arguments.length){ 
-            case 1: 
-                return parseInt(Math.random()*minNum+1,10); 
-            break; 
-            case 2: 
-                return parseInt(Math.random()*(maxNum-minNum+1)+minNum,10); 
-            break; 
-                default: 
-                    return 0; 
-                break; 
-        } 
-    } 
+    function formatProbArr(arr) {
+        // 格式化所有概率，自动求平均
+        let retarr = arr.concat();
+        let maxProb = 0;
+        let restNumber = retarr.length;
+        let aveProb = 0;
+        for (let i = 0; i < retarr.length; i++) {
+            if (retarr[i].prob != 0) {
+                maxProb = floatAdd(maxProb,retarr[i].prob)
+                restNumber = restNumber - 1;
+            }
+        }
+        aveProb = floatDiv(1-maxProb,restNumber);
+        
+        for (let i = 0; i < retarr.length; i++) {
+            if (retarr[i].prob == 0) {
+                retarr[i].prob = aveProb;
+            }
+        }
+        return retarr;
+    }
+
+    function getProbOpt(randMath,arr) {
+        // 返回值:结果的数组成员序号
+        // randMath 是 0-1的某一个值
+        // arr 传 this.targetProb即可
+        // 原理:
+        // 因为已经分好了0-1之间的区间，所以判断randMath在哪个区间即可知道结果
+        let result = 0;
+        let leiji = 0;
+        for (let i = 0; i < arr.length; i++) {
+            leiji = floatAdd(leiji,arr[i].prob);
+            if (randMath <= leiji) {
+                result = i;
+                break;
+            } 
+        }
+        return result;
+    }
+
+
     function shiftArr(arr) {
         // 将数组第一个成员移动到最后一个
-        let newArr = arr;
-        let firstMember = arr.shift();
-        arr.push(firstMember);
+        let newArr = arr.concat();
+        let firstMember = newArr.shift();
+        newArr.push(firstMember);
         return newArr;
     }
     function getResult(angle,num) {
@@ -224,24 +261,49 @@
         
         let j = 360 / num;
         let y = Math.abs(angle) % 360;
-        let index = Math.floor((y - j/2) / j) + 1;
-        if (index == num) {
+        let index = Math.floor((y - j/2) / j);
+        if (index == -1) {
             index = 0;
         }
         return index;
     }
 
+    function getAngleWillRotate(r,num) {
+        let ret = 0;
+        
+        let j = 360 / num;
+        ret = r * j + j / 2 + j * randomNum(200,800)/1000;
+        // 这个公式是上面那个函数逆推导出来的
+        return ret;
+    }
     let vm = new Vue({
         el: "#app",
         data () {
             return {
                 target: [],
+                targetProb: [],
                 isClick: false,
                 angle: 0,
                 options: "",
                 title: "",
                 angles: [],
                 resultOpt: "",
+                mul: 3,
+                beforeAngle: 0,
+            }
+        },
+        watch: {
+            mul(n,o) {
+                
+                if (Number(n) > 5) {
+                    alert("请输入大于0小于5的整数");
+                    this.mul = Number(o);
+                } else {
+                    this.mul = Math.floor(this.mul / 1);
+                   
+                }
+                
+                
             }
         },
         methods: {
@@ -264,17 +326,36 @@
                 // this.angle = this.angle + randomNum(360,720);
                 // this.$refs.zhuanpanDOM.style = 'transform: rotate(' + this.angle + 'deg);transition: 2s cubic-bezier(0,0,0.3,1);';
 
-                // 数组：将arr第一个成员放到最后一个
-                // 1：360/片数 = 基数
-                // 2：abs(旋转角度)%360 = 余数
-                // 3：floor((余数-基数/2)/基数) + 1 = 数组成员序号
-                this.resultOpt = ""
-                this.angle = this.angle - randomNum(720,1080);
-                clearTimeout(timmer);
-                timmer = setTimeout(() => {
-                    this.resultOpt = this.angles[getResult(this.angle,this.target.length)];
-                    console.log(this.resultOpt);
-                }, 2000);
+                if (this.options.indexOf("(") == -1) {
+                    // 不计算概率
+                    // 数组：将arr第一个成员放到最后一个
+                    // 1：360/片数 = 基数
+                    // 2：abs(旋转角度)%360 = 余数
+                    // 3：floor((余数-基数/2)/基数) = 数组成员序号
+                    this.resultOpt = ""
+                    this.angle = this.angle - randomNum(720,1080);
+                    clearTimeout(timmer);
+                    timmer = setTimeout(() => {
+                        this.resultOpt = this.angles[getResult(this.angle,this.target.length)];
+                    }, 2000);
+                    
+                } else {
+                    // // 计算概率
+                    this.resultOpt = "";
+                    let angleWillRotate = 0;
+                    let resultArrNum = getProbOpt(Math.random(),this.targetProb);
+                    
+                    angleWillRotate = getAngleWillRotate(resultArrNum,this.target.length);
+                    this.angle = this.angle + this.beforeAngle - angleWillRotate - 360*2;
+                    this.beforeAngle = angleWillRotate; //存储上一次旋转的角度，下一次修正
+                    clearTimeout(timmer);
+                    timmer = setTimeout(() => {
+                        this.resultOpt = this.angles[resultArrNum]; // 得到最后结果
+                    }, 2000);
+                    
+
+                }
+                
                 
                 
 
@@ -294,7 +375,13 @@
                 }
             },
             done() {
-                let arr = [];
+                this.target = [];
+                this.angle = 0;
+                this.resultOpt = "";
+                this.beforeAngle = 0;
+                let arr = []; //这个是用来分割每一行的
+                let arr1 = []; //这个用来正式存储每一行选项的（去除概率）
+                let arrProb = [];
                 if (this.options.indexOf("\n") != -1) {
                     arr = this.options.split("\n");
                 } else {
@@ -304,12 +391,43 @@
                         arr = this.options.split(" ");
                     }
                 }
-                arr = arr.concat(arr);
-                this.angles = shiftArr(arr);
-                
-                
 
-                this.target = arr;
+                // 概率头
+                for (let i = 0; i < arr.length; i++) {
+                    let optName = "";
+                    let optProb = 0;
+                    if (arr[i].indexOf("(") != -1) {
+                        //填写了概率
+                        optName = arr[i].substring(0,arr[i].indexOf("("));
+                        if (arr[i].indexOf(")") != -1) {
+                            optProb = arr[i].substring(arr[i].indexOf("(") + 1,arr[i].indexOf(")"));
+                        } else {
+                            optProb = arr[i].substring(arr[i].indexOf("(") + 1);
+                        }
+                    } else {
+                        optName = arr[i];
+                        optProb = 0;
+                    }
+                    let obj = {
+                        name: optName,
+                        prob: Number(optProb),
+                    }
+                    
+                    arr1.push(optName);
+                    arrProb.push(obj);
+                }
+                this.targetProb = formatProbArr(arrProb).concat();
+                this.targetProb = shiftArr(this.targetProb).concat();
+                
+                // 概率尾
+
+                let concatTime = Number(this.mul);
+                for (let i = 0; i < concatTime; i++) {
+                    arr1 = arr1.concat(arr1);
+                }
+                this.angles = shiftArr(arr1).concat();
+                
+                this.target = arr1.concat();
                 
             },
             reset() {
@@ -317,6 +435,7 @@
                 this.target = [];
                 this.angle = 0;
                 this.resultOpt = "";
+                this.beforeAngle = 0;
             }
         },
     })
