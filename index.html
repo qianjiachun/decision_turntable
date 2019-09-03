@@ -11,7 +11,7 @@
             padding: 0;
         }
         [v-cloak]{
-            display: none;
+            display: none !important;
         }
         .zhuanpan_wrap{
             height: 350px;
@@ -81,6 +81,8 @@
             text-align: center;
             transform: rotate(-45deg);
             word-wrap:break-word;/* 用于强制折行 */
+            color: white;
+            font-family: "Microsoft YaHei";
             
         }
 
@@ -157,9 +159,9 @@
 <body>
     
     <div id="app">
-        <h1 v-cloak style="text-align:center;margin-bottom: 20px;">{{title}}</h1>
+        <h1 v-cloak style="text-align:center;margin-bottom: 20px;display:block;height:50px;width:100%;font-family: 'Microsoft YaHei';">{{title}}</h1>
         <br/>
-        <h1 v-cloak style="text-align:center;margin-bottom: 20px;">{{resultOpt}}</h1>
+        <h1 v-cloak style="text-align:center;margin-bottom: 20px;display:block;height:50px;width:100%;font-family: 'Microsoft YaHei';">{{resultOpt}}</h1>
         <div class="zhuanpan_wrap" v-cloak>
             <!-- 这个div要转的，但是下面的按钮不需要转，所以不把按钮放在这里面 -->
             
@@ -314,6 +316,7 @@
                 this.options = "";
                 this.target = [];
                 this.angle = 0;
+                this.resultOpt = "";
             }
         },
     })
