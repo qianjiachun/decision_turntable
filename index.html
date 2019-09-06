@@ -319,7 +319,7 @@
             },
             zhuanpanStyle() {
                 
-                return 'transform: rotate(' + this.angle + 'deg);transition: 2s cubic-bezier(0,0,0.3,1);';
+                return 'transform: rotate(' + this.angle + 'deg);transition: 2s cubic-bezier(0,0,0,1);';
                 
             },
             zhuan() {
@@ -352,13 +352,7 @@
                     timmer = setTimeout(() => {
                         this.resultOpt = this.angles[resultArrNum]; // 得到最后结果
                     }, 2000);
-                    
-
                 }
-                
-                
-                
-
             },
             enterClick() {
                 this.isClick = true;
